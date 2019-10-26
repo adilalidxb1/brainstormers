@@ -1,0 +1,140 @@
+#include <ESP8266WiFi.h>
+#include "ESP8266HTTPClient.h"
+
+int level;
+const int analog_0=0;
+int l1=13;
+int l2=12;
+int l3=11;
+int l4=10;
+
+
+
+//int FloatSensor = 2; //D4 pin of NodeMCU
+int buttonState ; //reads pushbutton status
+
+const char* ssid = "Ooredoo QITCOM"; //ssid of your wifi
+const char* password = "ooredoo123"; //password of your wifi
+//String level;
+int relay = 5; // D1 pin of NodeMCU
+WiFiServer server(80);
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);  
+  WiFi.begin(ssid, password); //connecting to wifi
+  while (WiFi.status() != WL_CONNECTED)// while wifi not connected
+  {
+    delay(500);
+    Serial.print("."); //print "...."
+  }     
+ 
+  Serial.println("");
+  Serial.println("WiFi connected");
+  server.begin();
+  Serial.println("Server started");
+  Serial.println(WiFi.localIP());  // Print the IP address
+  //pinMode(FloatSensor, INPUT_PULLUP); //Arduino Internal Resistor 10K
+  pinMode(relay, OUTPUT); // set relay pin as output
+  digitalWrite(relay, LOW);
+  delay(4000);
+}
+void loop()
+{
+  int value ;
+//  buttonState = digitalRead(FloatSensor);  // read the value of float sensor
+ /* if (buttonState == HIGH)                 // if the value is HIGH
+ {                                        // the level is high
+    Serial.println( "WATER LEVEL - HIGH");
+    level = "Full";
+    digitalWrite(relay, LOW);              // turn OFF the relay
+    //value = LOW;
+  }
+  else 
+  {
+    Serial.println( "WATER LEVEL - LOW" ); // if the value is LOW
+    level = "Empty";                       // the level is low
+    digitalWrite(relay, HIGH);             // turn ON the relay
+    //value = HIGH;
+  }*/
+  level=analogRead(analog_0);
+Serial.println(level);
+if (level<500)
+{
+  //digitalWrite(l1, HIGH);
+  //digitalWrite(l2, LOW);
+   //digitalWrite(l3, LOW);
+    //digitalWrite(l4, LOW);
+       Serial.println("Empty");
+       delay(500);
+}
+else if(level>499&&level<550)
+{
+  //digitalWrite(l1, HIGH);
+  //digitalWrite(l2, LOW);
+   //digitalWrite(l3, LOW);
+    //digitalWrite(l4, LOW);
+       Serial.println("40% Filled");
+       delay(500);
+ 
+  }
+else if(level>549&&level<600)
+ {
+  //digitalWrite(l1, LOW);
+  //digitalWrite(l2, HIGH);
+   //digitalWrite(l3, LOW);
+    //digitalWrite(l4, LOW);
+       Serial.println("80% Filled");
+  delay(200);
+  }
+
+else if(level>599)
+ {
+  //digitalWrite(l1, LOW);
+  //digitalWrite(l2, LOW);
+   //digitalWrite(l3, HIGH);
+    //digitalWrite(l4, LOW);
+       Serial.println("Fully Filled");
+  delay(200);
+  }
+  WiFiClient client = server.available(); // Check if a client has connected
+  if (!client)
+  {
+    return;
+  }
+  String request = client.readStringUntil('\r');
+  Serial.println(request);
+  client.flush();
+  // Match the request
+  if (request.indexOf("/MOTOR=ON") != -1)
+  {
+    digitalWrite(relay, HIGH);   // if request is ON, turn ON the relay.
+    value = HIGH;
+  }
+  if (request.indexOf("/MOTOR=OFF") != -1)
+  {
+    digitalWrite(relay, LOW);    // if request is OFF, turn OFF the relay.
+    value = LOW;
+  }
+  delay(100);
+  // Prepare the response
+  String s = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n <!DOCTYPE html> <html> <head> <title>IoT based Smart Water Level Monitoring</title> <style>";
+  s += "a:link {background-color: YELLOW;text-decoration: none;}";
+  s += "table, th, td </style> </head> <body> <h1  style=";
+  s += "font-size:300%;";
+  s += " ALIGN=CENTER> IoT based Smart Water Level Monitoring</h1>";
+  s += "<p ALIGN=CENTER style=""font-size:150%>";
+  s += "<b>Water level - </b><b>";
+  s += level;
+  s += "</b></p>";
+  s += "<br><br>";
+  s += "<a href=\"/MOTOR=ON\"\"><button><ALIGN=CENTER style=""font-size:150%>On </button></a>";
+  s += "<a href=\"/MOTOR=OFF\"\"><button><ALIGN=CENTER style=""font-size:150%>Off </button></a><br />";
+  s += "</body> </html> \n";
+
+  
+  client.print(s); // all the values are send to the webpage
+  delay(100);
+}
